@@ -1,0 +1,4 @@
+import React from 'react'; import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import SignupScreen from '../screens/Auth/SignupScreen'; import VerifyPhoneScreen from '../screens/Auth/VerifyPhoneScreen'; import CreatePasscodeScreen from '../screens/Auth/CreatePasscodeScreen'; import CreateTxnPinScreen from '../screens/Auth/CreateTxnPinScreen'; import LoginScreen from '../screens/Auth/LoginScreen';
+const Stack = createNativeStackNavigator();
+export default ()=> <Stack.Navigator screenOptions={{headerShown:false}}><Stack.Screen name="Signup" component={SignupScreen}/><Stack.Screen name="VerifyPhone" component={VerifyPhoneScreen}/><Stack.Screen name="CreatePasscode" component={CreatePasscodeScreen}/><Stack.Screen name="CreateTxnPin" component={CreateTxnPinScreen}/><Stack.Screen name="Login" component={LoginScreen}/></Stack.Navigator>;
