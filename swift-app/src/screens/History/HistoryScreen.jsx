@@ -1,11 +1,11 @@
 import React, { useContext } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { useWallet } from '../../contexts/WalletContext';
+import { WalletContext } from '../../contexts/WalletContext';
 import TransactionItem from '../../components/TransactionItem';
 import { ThemeContext } from '../../contexts/ThemeContext';
 
 export default function HistoryScreen() {
-  const { transactions } = useWallet();
+  const { transactions } = useContext(WalletContext); // ✅ now pulling from WalletContext
   const { theme } = useContext(ThemeContext);
 
   return (
@@ -14,12 +14,16 @@ export default function HistoryScreen() {
         History
       </Text>
 
-      {transactions.map((t) => (
-        <TransactionItem key={t.id} item={t} />
-      ))}
-
-      {transactions.length === 0 && (
-        <Text style={{ color: theme.textMuted, marginTop: theme.SPACING.md, textAlign: 'center' }}>
+      {transactions.length > 0 ? (
+        transactions.map((t) => <TransactionItem key={t.id} item={t} />)
+      ) : (
+        <Text
+          style={{
+            color: theme.textMuted,
+            marginTop: theme.SPACING.md,
+            textAlign: 'center',
+          }}
+        >
           No transactions yet
         </Text>
       )}

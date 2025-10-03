@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
+import WalletStack from './WalletStack'
 import WalletHome from '../screens/Wallet/WalletHome';
 import MarketplaceHome from '../screens/Marketplace/MarketplaceHome';
 import HistoryScreen from '../screens/History/HistoryScreen';
@@ -45,10 +46,10 @@ export default function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Wallet" component={WalletHome} />
-      <Tab.Screen name="Marketplace" component={MarketplaceHome} />
-      <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Wallet" component={WalletStack} options={{headerShown: false}} />
+      <Tab.Screen name="Marketplace" component={MarketplaceHome} options={{headerShown: false}} />
+      <Tab.Screen name="History" component={HistoryScreen} options={{headerShown: false}} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{headerShown: false}} />
     </Tab.Navigator>
   );
 }
