@@ -1,37 +1,52 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Image } from 'react-native';
-import { ThemeContext } from '../../contexts/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useContext } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Image, Alert } from "react-native";
+import { ThemeContext } from "../../contexts/ThemeContext";
+import { useWallet } from "../../contexts/WalletContext";
+import { Ionicons } from "@expo/vector-icons";
+
 const NETWORKS = [
-  { id: 'mtn', name: 'MTN', logo: require('../../assets/images/mtn.png') },
-  { id: 'airtel', name: 'Airtel', logo: require('../../assets/images/airtel.png') },
-  { id: 'glo', name: 'Glo', logo: require('../../assets/images/glo.png') },
-  { id: '9mobile', name: '9mobile', logo: require('../../assets/images/9mobile.png') },
+  { id: "mtn", name: "MTN", logo: require("../../assets/images/mtn.png") },
+  { id: "airtel", name: "Airtel", logo: require("../../assets/images/airtel.png") },
+  { id: "glo", name: "Glo", logo: require("../../assets/images/glo.png") },
+  { id: "9mobile", name: "9mobile", logo: require("../../assets/images/9mobile.png") },
 ];
 
 export default function AirtimeScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { balance, debitForPurchase, pushNotification } = useWallet();
 
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState("");
   const [network, setNetwork] = useState(null);
-  const [amount, setAmount] = useState('');
-  const [pin, setPin] = useState('');
+  const [amount, setAmount] = useState("");
+  const [pin, setPin] = useState("");
   const [showNetworkOptions, setShowNetworkOptions] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleConfirm = () => {
-    if (pin.length === 4 && phone && network && amount) {
+  const handleConfirm = async () => {
+    if (pin.length !== 4) return Alert.alert("Invalid PIN", "Enter a 4-digit transaction PIN");
+    if (!phone || !network || !amount) return;
+
+    try {
+      await debitForPurchase(Number(amount), `Airtime (${network.name}) to ${phone}`);
+      await pushNotification(`₦${amount} Airtime purchased for ${phone} on ${network.name}`);
       setShowPinModal(false);
       setSuccess(true);
+    } catch (err) {
+      setShowPinModal(false);
+      if (err.message === "INSUFFICIENT") {
+        Alert.alert("Insufficient Funds", "You don’t have enough balance for this transaction.");
+      } else {
+        Alert.alert("Error", "Something went wrong, please try again.");
+      }
     }
   };
 
   const handleDone = () => {
-    setPhone('');
+    setPhone("");
     setNetwork(null);
-    setAmount('');
-    setPin('');
+    setAmount("");
+    setPin("");
     setSuccess(false);
     navigation.goBack();
   };
@@ -46,13 +61,12 @@ export default function AirtimeScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </View>
 
-
       {success ? (
         <View style={styles.centered}>
           <Ionicons name="checkmark-circle" size={80} color={theme.success} />
-          <Text style={[styles.successText, { color: theme.primary }]}>Airtime Successful</Text>
+          <Text style={[styles.successText, { color: theme.primary }]}>Airtime Purchase Successful</Text>
           <Text style={{ color: theme.textMuted, marginBottom: 20 }}>
-            ₦{amount} Airtime sent to {phone} ({network?.name})
+            ₦{amount} sent to {phone} ({network?.name})
           </Text>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.accent }]}
@@ -63,7 +77,6 @@ export default function AirtimeScreen({ navigation }) {
         </View>
       ) : (
         <>
-          {/* Phone  */}
           <Text style={[styles.label, { color: theme.primary }]}>Phone Number</Text>
           <TextInput
             placeholder="08012345678"
@@ -75,7 +88,6 @@ export default function AirtimeScreen({ navigation }) {
             style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
           />
 
-          {/* Network*/}
           <Text style={[styles.label, { color: theme.primary }]}>Network</Text>
           <TouchableOpacity
             style={[styles.dropdown, { borderColor: theme.border }]}
@@ -90,7 +102,7 @@ export default function AirtimeScreen({ navigation }) {
               <Text style={{ color: theme.textMuted }}>Select Network</Text>
             )}
             <Ionicons
-              name={showNetworkOptions ? 'chevron-up' : 'chevron-down'}
+              name={showNetworkOptions ? "chevron-up" : "chevron-down"}
               size={18}
               color={theme.primary}
             />
@@ -111,7 +123,6 @@ export default function AirtimeScreen({ navigation }) {
               </TouchableOpacity>
             ))}
 
-          {/*  Amount */}
           <Text style={[styles.label, { color: theme.primary }]}>Amount</Text>
           <TextInput
             placeholder="₦0.00"
@@ -122,7 +133,6 @@ export default function AirtimeScreen({ navigation }) {
             style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
           />
 
-       
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.accent }]}
             onPress={() => setShowPinModal(true)}
@@ -132,7 +142,6 @@ export default function AirtimeScreen({ navigation }) {
         </>
       )}
 
-      {/*  PIN */}
       <Modal visible={showPinModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background }]}>

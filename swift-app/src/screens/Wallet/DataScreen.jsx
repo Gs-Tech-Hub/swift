@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Image } from 'react-native';
 import { ThemeContext } from '../../contexts/ThemeContext';
+import { useWallet } from "../../contexts/WalletContext";
 import { Ionicons } from '@expo/vector-icons';
 
 const NETWORKS = [
@@ -48,6 +49,8 @@ const NETWORKS = [
 
 export default function DataScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { debitForPurchase, pushNotification } = useWallet();
+
 
   const [phone, setPhone] = useState('');
   const [network, setNetwork] = useState(null);
@@ -59,12 +62,23 @@ export default function DataScreen({ navigation }) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleConfirm = () => {
-    if (pin.length === 4 && phone && network && plan) {
-      setShowPinModal(false);
-      setSuccess(true);
+  const handleConfirm = async () => {
+  if (pin.length !== 4 || !phone || !network || !plan) return;
+
+  try {
+    await debitForPurchase(Number(plan.price), `Data (${plan.label}) on ${network.name} for ${phone}`);
+    await pushNotification(`₦${plan.price} Data plan purchased for ${phone} on ${network.name}`);
+    setShowPinModal(false);
+    setSuccess(true);
+  } catch (err) {
+    setShowPinModal(false);
+    if (err.message === "INSUFFICIENT") {
+      Alert.alert("Insufficient Funds", "You don’t have enough balance for this purchase.");
+    } else {
+      Alert.alert("Error", "Something went wrong, please try again.");
     }
-  };
+  }
+};
 
   const handleDone = () => {
     setPhone('');

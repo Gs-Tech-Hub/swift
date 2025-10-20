@@ -6,13 +6,18 @@ import {
   TextInput,
   TouchableOpacity,
   Modal,
+  Alert,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeContext } from "../../contexts/ThemeContext";
+import { useWallet } from "../../contexts/WalletContext";
+import { useLoan } from "../../contexts/LoanContext";
 
 export default function CreditScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { balance, deposit, withdraw, pushNotification } = useWallet();
+  const { outstandingLoan, borrowLoan, repayLoan } = useLoan();
 
   const [activeTab, setActiveTab] = useState("Borrow");
   const [loanAmount, setLoanAmount] = useState("");
@@ -20,10 +25,8 @@ export default function CreditScreen({ navigation }) {
   const [repayAmount, setRepayAmount] = useState("");
   const [showPinModal, setShowPinModal] = useState(false);
 
-
-  const creditScore = 720; 
+  const creditScore = 720;
   const eligibleAmount = 50000;
-  const outstandingLoan = 12000;
 
   const radius = 50;
   const strokeWidth = 8;
@@ -31,7 +34,6 @@ export default function CreditScreen({ navigation }) {
   const circumference = normalizedRadius * 2 * Math.PI;
   const progress = (creditScore / 850) * circumference;
 
- 
   const getScoreLabel = (score) => {
     if (score < 580) return { label: "Poor", color: theme.danger };
     if (score < 670) return { label: "Fair", color: "#FFA500" };
@@ -39,20 +41,54 @@ export default function CreditScreen({ navigation }) {
     if (score < 800) return { label: "Very Good", color: theme.accent };
     return { label: "Excellent", color: theme.primary };
   };
-
   const scoreLabel = getScoreLabel(creditScore);
+
+  const handleConfirm = async () => {
+    setShowPinModal(false);
+    try {
+      if (activeTab === "Borrow") {
+        if (!loanAmount) return Alert.alert("Error", "Enter loan amount");
+        const amount = Number(loanAmount);
+        if (amount > eligibleAmount)
+          return Alert.alert("Limit Exceeded", "You can’t borrow above your eligible limit");
+
+        await borrowLoan(amount, duration);
+        await deposit(amount, "Loan credited");
+        await pushNotification(`Loan of ₦${amount.toLocaleString()} credited to your wallet`);
+        Alert.alert("Success", `₦${amount.toLocaleString()} credited successfully`);
+        setLoanAmount("");
+      }
+
+      if (activeTab === "Repay") {
+        if (!repayAmount) return Alert.alert("Error", "Enter repayment amount");
+        const amount = Number(repayAmount);
+        if (amount > balance)
+          return Alert.alert("Insufficient Funds", "Top up your wallet to repay");
+        if (amount > outstandingLoan)
+          return Alert.alert("Invalid Amount", "You can’t repay more than you owe");
+
+        await withdraw(amount, "Loan repayment");
+        await repayLoan(amount);
+        await pushNotification(`₦${amount.toLocaleString()} repaid towards your loan`);
+        Alert.alert("Success", `₦${amount.toLocaleString()} repaid successfully`);
+        setRepayAmount("");
+      }
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-    <View style={styles.topBar}>
-    <TouchableOpacity onPress={() => navigation.goBack()}>
-    <Ionicons name="arrow-back" size={24} color={theme.primary} />
-    </TouchableOpacity>
-    <Text style={[styles.title, { color: theme.primary }]}>Loan</Text>
-    <View style={{ width: 24 }} />
-    </View>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={theme.primary} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: theme.primary }]}>Loan</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-      {/* Top Card */}
+      {/* Credit Score Card */}
       <View
         style={[
           styles.card,
@@ -79,6 +115,7 @@ export default function CreditScreen({ navigation }) {
             cy={radius}
           />
         </Svg>
+
         <View style={styles.scoreTextWrapper}>
           <Text style={[styles.scoreValue, { color: theme.primary }]}>
             {creditScore}
@@ -87,6 +124,7 @@ export default function CreditScreen({ navigation }) {
             {scoreLabel.label}
           </Text>
         </View>
+
         <Text
           style={{
             marginTop: theme.SPACING.md,
@@ -95,6 +133,14 @@ export default function CreditScreen({ navigation }) {
           }}
         >
           Eligible Loan: ₦{eligibleAmount.toLocaleString()}
+        </Text>
+        <Text
+          style={{
+            color: theme.textMuted,
+            marginTop: 4,
+          }}
+        >
+          Outstanding Loan: ₦{outstandingLoan.toLocaleString()}
         </Text>
       </View>
 
@@ -124,32 +170,22 @@ export default function CreditScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Borrow  */}
+      {/* Borrow */}
       {activeTab === "Borrow" && (
         <View style={styles.form}>
-          <Text style={[styles.label, { color: theme.primary }]}>
-            Loan Amount
-          </Text>
+          <Text style={[styles.label, { color: theme.primary }]}>Loan Amount</Text>
           <TextInput
             value={loanAmount}
             onChangeText={setLoanAmount}
             placeholder="Enter amount"
             keyboardType="numeric"
-            style={[
-              styles.input,
-              { borderColor: theme.border, color: theme.primary },
-            ]}
+            style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
             placeholderTextColor={theme.textMuted}
           />
 
-          <Text style={[styles.label, { color: theme.primary }]}>
-            Duration
-          </Text>
+          <Text style={[styles.label, { color: theme.primary }]}>Duration</Text>
           <TouchableOpacity
-            style={[
-              styles.input,
-              { borderColor: theme.border, justifyContent: "center" },
-            ]}
+            style={[styles.input, { borderColor: theme.border, justifyContent: "center" }]}
             onPress={() =>
               setDuration(duration === "14 days" ? "30 days" : "14 days")
             }
@@ -157,7 +193,6 @@ export default function CreditScreen({ navigation }) {
             <Text style={{ color: theme.primary }}>{duration}</Text>
           </TouchableOpacity>
 
-          {/* Interest */}
           {loanAmount !== "" && (
             <View style={{ marginTop: theme.SPACING.md }}>
               <Text style={{ color: theme.textMuted }}>
@@ -165,10 +200,7 @@ export default function CreditScreen({ navigation }) {
               </Text>
               <Text style={{ color: theme.textMuted }}>
                 Total Repayable: ₦
-                {(
-                  parseInt(loanAmount) +
-                  parseInt(loanAmount) * 0.05
-                ).toFixed(0)}
+                {(parseInt(loanAmount) + parseInt(loanAmount) * 0.05).toFixed(0)}
               </Text>
             </View>
           )}
@@ -182,7 +214,7 @@ export default function CreditScreen({ navigation }) {
         </View>
       )}
 
-      {/* Repay*/}
+      {/* Repay */}
       {activeTab === "Repay" && (
         <View style={styles.form}>
           <Text style={{ color: theme.textMuted }}>
@@ -193,13 +225,9 @@ export default function CreditScreen({ navigation }) {
             onChangeText={setRepayAmount}
             placeholder="Enter amount"
             keyboardType="numeric"
-            style={[
-              styles.input,
-              { borderColor: theme.border, color: theme.primary },
-            ]}
+            style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
             placeholderTextColor={theme.textMuted}
           />
-
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.secondary }]}
             onPress={() => setShowPinModal(true)}
@@ -209,7 +237,7 @@ export default function CreditScreen({ navigation }) {
         </View>
       )}
 
-      {/* PIN  */}
+      {/* PIN Modal */}
       <Modal visible={showPinModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View
@@ -225,15 +253,12 @@ export default function CreditScreen({ navigation }) {
               placeholder="••••"
               secureTextEntry
               keyboardType="numeric"
-              style={[
-                styles.input,
-                { borderColor: theme.border, color: theme.primary },
-              ]}
+              style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
               placeholderTextColor={theme.textMuted}
             />
             <TouchableOpacity
               style={[styles.button, { backgroundColor: theme.accent }]}
-              onPress={() => setShowPinModal(false)}
+              onPress={handleConfirm}
             >
               <Text style={{ color: "#FFF", fontWeight: "600" }}>Submit</Text>
             </TouchableOpacity>
@@ -243,6 +268,7 @@ export default function CreditScreen({ navigation }) {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },

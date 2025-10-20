@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  Alert,
 } from "react-native";
 import { ThemeContext } from "../../contexts/ThemeContext";
+import { useWallet } from "../../contexts/WalletContext";
 import { Ionicons } from "@expo/vector-icons";
-
 
 const ELECTRICITY_PROVIDERS = ["Ikeja Electric", "Eko Electric", "Abuja Disco"];
 const METER_TYPES = ["Prepaid", "Postpaid"];
-
 
 const TV_PROVIDERS = {
   DSTV: [
@@ -35,15 +35,16 @@ const TV_PROVIDERS = {
 
 export default function BillsScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { debitForPurchase } = useWallet();
   const [activeTab, setActiveTab] = useState("electricity");
 
-  // Electricity state
+  // Electricity
   const [provider, setProvider] = useState(null);
   const [meterType, setMeterType] = useState(null);
   const [meterNumber, setMeterNumber] = useState("");
   const [elecAmount, setElecAmount] = useState("");
 
-  // TV state
+  // TV
   const [iuc, setIuc] = useState("");
   const [tvProvider, setTvProvider] = useState(null);
   const [tvPackage, setTvPackage] = useState(null);
@@ -54,15 +55,22 @@ export default function BillsScreen({ navigation }) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleConfirm = () => {
-    if (pin.length === 4) {
+  const handleConfirm = async () => {
+    if (pin.length !== 4) return Alert.alert("Error", "Enter your 4-digit PIN");
+    try {
+      if (activeTab === "electricity") {
+        await debitForPurchase(Number(elecAmount), `${provider} Electricity Bill`);
+      } else {
+        await debitForPurchase(Number(tvAmount), `${tvProvider} ${tvPackage.name}`);
+      }
       setShowPinModal(false);
       setSuccess(true);
+    } catch (err) {
+      Alert.alert("Transaction Failed", "Insufficient funds");
     }
   };
 
   const handleDone = () => {
-    // Reset state
     setProvider(null);
     setMeterType(null);
     setMeterNumber("");
@@ -78,7 +86,6 @@ export default function BillsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={theme.primary} />
@@ -87,7 +94,6 @@ export default function BillsScreen({ navigation }) {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Switch */}
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[
@@ -96,9 +102,7 @@ export default function BillsScreen({ navigation }) {
           ]}
           onPress={() => setActiveTab("electricity")}
         >
-          <Text
-            style={{ color: activeTab === "electricity" ? theme.accent : theme.textMuted }}
-          >
+          <Text style={{ color: activeTab === "electricity" ? theme.accent : theme.textMuted }}>
             Electricity
           </Text>
         </TouchableOpacity>
@@ -113,7 +117,6 @@ export default function BillsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-  
       {success ? (
         <View style={styles.centered}>
           <Ionicons name="checkmark-circle" size={80} color={theme.success} />
@@ -127,7 +130,7 @@ export default function BillsScreen({ navigation }) {
         </View>
       ) : (
         <>
-          {/*  Electricity  */}
+          {/* Electricity Form */}
           {activeTab === "electricity" && (
             <>
               <Text style={[styles.label, { color: theme.primary }]}>Provider</Text>
@@ -143,7 +146,6 @@ export default function BillsScreen({ navigation }) {
                   <Text style={{ color: theme.primary }}>{prov}</Text>
                 </TouchableOpacity>
               ))}
-
               <Text style={[styles.label, { color: theme.primary }]}>Meter Type</Text>
               {METER_TYPES.map((type) => (
                 <TouchableOpacity
@@ -157,17 +159,13 @@ export default function BillsScreen({ navigation }) {
                   <Text style={{ color: theme.primary }}>{type}</Text>
                 </TouchableOpacity>
               ))}
-
-              <Text style={[styles.label, { color: theme.primary }]}>Meter Number</Text>
               <TextInput
-                placeholder="Enter Meter Number"
+                placeholder="Meter Number"
                 placeholderTextColor={theme.textMuted}
                 value={meterNumber}
                 onChangeText={setMeterNumber}
                 style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
               />
-
-              <Text style={[styles.label, { color: theme.primary }]}>Amount</Text>
               <TextInput
                 placeholder="₦0.00"
                 placeholderTextColor={theme.textMuted}
@@ -176,7 +174,6 @@ export default function BillsScreen({ navigation }) {
                 onChangeText={setElecAmount}
                 style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
               />
-
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: theme.accent }]}
                 onPress={() => setShowPinModal(true)}
@@ -189,16 +186,13 @@ export default function BillsScreen({ navigation }) {
           {/* TV Form */}
           {activeTab === "tv" && (
             <>
-              <Text style={[styles.label, { color: theme.primary }]}>IUC / Smart Card Number</Text>
               <TextInput
-                placeholder="Enter IUC Number"
+                placeholder="IUC / Smart Card Number"
                 placeholderTextColor={theme.textMuted}
                 value={iuc}
                 onChangeText={setIuc}
                 style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
               />
-
-              <Text style={[styles.label, { color: theme.primary }]}>Provider</Text>
               {Object.keys(TV_PROVIDERS).map((prov) => (
                 <TouchableOpacity
                   key={prov}
@@ -215,10 +209,8 @@ export default function BillsScreen({ navigation }) {
                   <Text style={{ color: theme.primary }}>{prov}</Text>
                 </TouchableOpacity>
               ))}
-
               {tvProvider && (
                 <>
-                  <Text style={[styles.label, { color: theme.primary }]}>Package</Text>
                   {TV_PROVIDERS[tvProvider].map((pkg) => (
                     <TouchableOpacity
                       key={pkg.id}
@@ -238,29 +230,20 @@ export default function BillsScreen({ navigation }) {
                   ))}
                 </>
               )}
-
               {tvPackage && (
-                <>
-                  <Text style={[styles.label, { color: theme.primary }]}>Amount</Text>
-                  <TextInput
-                    value={`₦${tvAmount}`}
-                    editable={false}
-                    style={[styles.input, { borderColor: theme.border, color: theme.primary }]}
-                  />
-                  <TouchableOpacity
-                    style={[styles.button, { backgroundColor: theme.accent }]}
-                    onPress={() => setShowPinModal(true)}
-                  >
-                    <Text style={styles.buttonText}>Pay</Text>
-                  </TouchableOpacity>
-                </>
+                <TouchableOpacity
+                  style={[styles.button, { backgroundColor: theme.accent }]}
+                  onPress={() => setShowPinModal(true)}
+                >
+                  <Text style={styles.buttonText}>Pay</Text>
+                </TouchableOpacity>
               )}
             </>
           )}
         </>
       )}
 
-      {/*  PIN  */}
+      {/* PIN Modal */}
       <Modal visible={showPinModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
@@ -300,7 +283,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: { fontSize: 18, fontWeight: "600" },
-
   tabRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -308,7 +290,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   tab: { flex: 1, alignItems: "center", paddingVertical: 10, borderBottomWidth: 2 },
-
   label: { fontSize: 16, fontWeight: "500", marginTop: 15, marginBottom: 8 },
   input: {
     borderWidth: 1,
@@ -318,35 +299,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: "100%",
   },
-  option: {
-    padding: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-
-  button: {
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    width: "100%",
-    marginTop: 10,
-  },
+  option: { padding: 12, borderWidth: 1, borderRadius: 8, marginBottom: 8 },
+  button: { padding: 14, borderRadius: 10, alignItems: "center", width: "100%", marginTop: 10 },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   successText: { fontSize: 22, fontWeight: "700", marginVertical: 12 },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    width: "85%",
-    borderRadius: 12,
-    padding: 20,
-    elevation: 5,
-  },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
+  modalContent: { width: "85%", borderRadius: 12, padding: 20, elevation: 5 },
 });

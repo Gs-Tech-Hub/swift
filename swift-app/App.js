@@ -8,6 +8,10 @@ import { MarketplaceProvider } from './src/contexts/MarketplaceContext';
 import { EscrowProvider } from './src/contexts/EscrowContext';
 import { MerchantProvider } from './src/contexts/MerchantContext';
 import { CreditProvider } from './src/contexts/CreditContext';
+import { FinanceProvider } from './src/contexts/FinanceContext';
+import { ProductProvider } from './src/contexts/ProductContext';
+import { SavingsProvider } from './src/contexts/SavingsContext';
+import { LoanProvider } from "./src/contexts/LoanContext";
 
 function AppContent() {
   const { theme, isDarkMode } = useTheme();
@@ -25,15 +29,23 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <WalletProvider>
-          <MarketplaceProvider>
-            <EscrowProvider>
-              <MerchantProvider>
-                <CreditProvider>
-                  <AppContent />
-                </CreditProvider>
-              </MerchantProvider>
-            </EscrowProvider>
-          </MarketplaceProvider>
+          <SavingsProvider>
+            <FinanceProvider>
+              <CreditProvider>
+                <LoanProvider>
+                  <ProductProvider>
+                    <MarketplaceProvider>
+                      <EscrowProvider>
+                        <MerchantProvider>
+                          <AppContent />
+                        </MerchantProvider>
+                      </EscrowProvider>
+                    </MarketplaceProvider>
+                  </ProductProvider>
+                </LoanProvider>
+              </CreditProvider>
+            </FinanceProvider>
+          </SavingsProvider>
         </WalletProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -1,10 +1,14 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { ThemeContext } from '../../contexts/ThemeContext';
+import { useWallet } from "../../contexts/WalletContext";
+
 import { Ionicons } from '@expo/vector-icons';
 
 export default function WithdrawScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { withdraw } = useWallet();
+
 
   const [amount, setAmount] = useState('');
   const [bank, setBank] = useState('');
@@ -13,12 +17,22 @@ export default function WithdrawScreen({ navigation }) {
   const [showPinModal, setShowPinModal] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleConfirm = () => {
-    if (pin.length === 4 && amount && bank && accountNumber) {
+ const handleConfirm = async () => {
+  if (pin.length === 4 && amount && bank && accountNumber) {
+    try {
+      await withdraw(amount, `Withdraw to ${bank} (${accountNumber})`);
       setShowPinModal(false);
       setSuccess(true);
+    } catch (err) {
+      if (err.message === "INSUFFICIENT") {
+        alert("Insufficient balance. Please deposit funds or request a credit.");
+      } else {
+        alert("Something went wrong. Try again.");
+      }
     }
-  };
+  }
+};
+
 
   const handleDone = () => {
     setAmount('');
