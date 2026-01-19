@@ -1,1 +1,0 @@
-export const formatCurrency=(a=0)=> `₦${Number(a).toLocaleString()}`;
